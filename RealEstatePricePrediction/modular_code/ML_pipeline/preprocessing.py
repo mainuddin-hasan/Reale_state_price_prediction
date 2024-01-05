@@ -12,6 +12,7 @@ from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer
 
 nltk.download('punkt')
+nltk.download('stopwords')
 
 # helper functions to prepare the data
 

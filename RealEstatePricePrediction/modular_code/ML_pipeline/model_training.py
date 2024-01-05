@@ -2,12 +2,12 @@
 import pandas as pd
 import numpy as np
 import sklearn
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
 from sklearn.linear_model import LinearRegression, Lasso, Ridge
 from sklearn.ensemble import VotingRegressor
-from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import r2_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+
 
 
 def split_train_test(df, target_variable, size, seed):
@@ -16,9 +16,9 @@ def split_train_test(df, target_variable, size, seed):
        size: test size ratio
        seed: random state'''
     try:
-        X = df.drop(target_variable,axis=1)
+        X = df.drop(target_variable, axis=1)
         y = df[[target_variable]]
-        x_train, x_test, y_train, y_test = train_test_split(X,y,test_size=size,random_state=seed)
+        x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=size, random_state=seed)
     except Exception as e:
         print(e)
     else:
@@ -40,26 +40,44 @@ def regression_model_trainer(x_train, x_test, y_train, y_test):
             ('lasso', Lasso())
             ]
         output = pd.DataFrame()
-        comparison_columns = ['Model','Train_R2', 'Train_MAE', 'Train_RMSE', 'Test_R2', 'Test_MAE', 'Test_RMSE']
+        comparison_columns = ['Model', 'Train_R2', 'Train_MAE', 'Train_RMSE', 'Test_R2', 'Test_MAE', 'Test_RMSE']
         estimators = []
-        for name, model in models:
 
-            rgr = model.fit(x_train, y_train)
-            y_pred_train = rgr.predict(x_train)
-            y_pred_test = rgr.predict(x_test)
-            #Mean Absolute Error or MAE
-            MAE_train = round(mean_absolute_error(y_train,y_pred_train),6)
-            MAE_test = round(mean_absolute_error(y_test,y_pred_test),6)
-            #Root Mean Squared Error or RMSE
-            RMSE_train = round(mean_squared_error(y_train,y_pred_train,squared=False),6)
-            RMSE_test = round(mean_squared_error(y_test,y_pred_test,squared=False),6)
-            #R2
-            R2_train = round(r2_score(y_train, y_pred_train),6)
-            R2_test = round(r2_score(y_test, y_pred_test),6)
-            estimators.append(rgr)
+        for name, model in models:
+            # Perform Grid Search and Cross-Validation
+            param_grid = {}
+            if name == 'ridge':
+                param_grid = {'alpha': [0.1, 1, 10]}
+            elif name == 'lasso':
+                param_grid = {'alpha': [0.1, 1, 10]}
+
+            grid_search = GridSearchCV(model, param_grid, cv=5, scoring='neg_mean_squared_error')
+            grid_search.fit(x_train, y_train)
+            best_model = grid_search.best_estimator_
+
+            # Cross-validation scores
+            cv_scores = cross_val_score(best_model, x_train, y_train, scoring='neg_mean_squared_error', cv=5)
+            cv_rmse_mean = np.sqrt(-cv_scores.mean())
+
+            y_pred_train = best_model.predict(x_train)
+            y_pred_test = best_model.predict(x_test)
+
+            # Mean Absolute Error or MAE
+            MAE_train = round(mean_absolute_error(y_train, y_pred_train), 6)
+            MAE_test = round(mean_absolute_error(y_test, y_pred_test), 6)
+
+            # Root Mean Squared Error or RMSE
+            RMSE_train = round(mean_squared_error(y_train, y_pred_train, squared=False), 6)
+            RMSE_test = round(mean_squared_error(y_test, y_pred_test, squared=False), 6)
+
+            # R2
+            R2_train = round(r2_score(y_train, y_pred_train), 6)
+            R2_test = round(r2_score(y_test, y_pred_test), 6)
+
+            estimators.append(best_model)
 
             metric_scores = [name, R2_train, MAE_train, RMSE_train, R2_test, MAE_test, RMSE_test]
-            final_dict = dict(zip(comparison_columns,metric_scores))
+            final_dict = dict(zip(comparison_columns, metric_scores))
             df_dictionary = pd.DataFrame([final_dict])
             output = pd.concat([output, df_dictionary], ignore_index=True)
     except Exception as e:
@@ -67,37 +85,38 @@ def regression_model_trainer(x_train, x_test, y_train, y_test):
     else:
         return output, estimators[0], estimators[1], estimators[2]
     
-    
+
+   
     
 def ensemble_regressor(x_train, x_test, y_train, y_test, estimators):
     '''
     Script to train a voting regressor
     estimators: List of tuples of name and fitted regressor objects'''
     try:
-        comparison_columns = ['Model','Train_R2', 'Train_MAE', 'Train_RMSE', 'Test_R2', 'Test_MAE', 'Test_RMSE']
+        comparison_columns = ['Model', 'Train_R2', 'Train_MAE', 'Train_RMSE', 'Test_R2', 'Test_MAE', 'Test_RMSE']
         # train
         voting_ensemble = VotingRegressor(estimators,)
-        voting_ensemble.fit(x_train,y_train)
+        voting_ensemble.fit(x_train, y_train)
 
         # predict
         y_pred_train = voting_ensemble.predict(x_train)
         y_pred_test = voting_ensemble.predict(x_test)
 
         # Mean Absolute Error or MAE
-        MAE_train = round(mean_absolute_error(y_train,y_pred_train),6)
-        MAE_test = round(mean_absolute_error(y_test,y_pred_test),6)
+        MAE_train = round(mean_absolute_error(y_train, y_pred_train), 6)
+        MAE_test = round(mean_absolute_error(y_test, y_pred_test), 6)
 
         # Root Mean Squared Error or RMSE
-        RMSE_train = round(mean_squared_error(y_train,y_pred_train,squared=False),6)
-        RMSE_test = round(mean_squared_error(y_test,y_pred_test,squared=False),6)
+        RMSE_train = round(mean_squared_error(y_train, y_pred_train, squared=False), 6)
+        RMSE_test = round(mean_squared_error(y_test, y_pred_test, squared=False), 6)
 
         # R2
-        R2_train = round(r2_score(y_train, y_pred_train),6)
-        R2_test = round(r2_score(y_test, y_pred_test),6)
+        R2_train = round(r2_score(y_train, y_pred_train), 6)
+        R2_test = round(r2_score(y_test, y_pred_test), 6)
 
         # comparison dataframe
         metric_scores = ['Voting_Ensemble', R2_train, MAE_train, RMSE_train, R2_test, MAE_test, RMSE_test]
-        final_dict = dict(zip(comparison_columns,metric_scores))
+        final_dict = dict(zip(comparison_columns, metric_scores))
         df_dictionary = pd.DataFrame([final_dict])
         
     except Exception as e:

@@ -16,7 +16,7 @@ script_number = int(input("Enter 1 to train the model \nEnter 2 to use the fasta
 if script_number == 1:
 
     # reading the data
-    df = utils.read_data('input\Pune Real Estate Data.xlsx')
+    df = utils.read_data(r'input\Pune Real Estate Data.xlsx')
 
     # preprocess data and generate features
     df1= preprocessing.preprocess_data(df)
@@ -28,17 +28,30 @@ if script_number == 1:
     # training regressors
     output, linear_reg, ridge, las = model_training.regression_model_trainer(x_train, x_test, y_train, y_test)
     # training ensemble
+    # estimators = [('lr',linear_reg),('rid',ridge),('lasso',las)]
+    # df_dict, voting_ensemble = model_training.ensemble_regressor(x_train, x_test, y_train, y_test, estimators)
+    # output = pd.concat([output, df_dict], ignore_index=True)
     estimators = [('lr',linear_reg),('rid',ridge),('lasso',las)]
-    df_dict, voting_ensemble = model_training.ensemble_regressor(x_train, x_test, y_train, y_test, estimators)
-    output = pd.concat([output, df_dict], ignore_index=True)
+    result = model_training.ensemble_regressor(x_train, x_test, y_train, y_test, estimators)
+
+    if result:
+        df_dict, voting_ensemble = result
+        output = pd.concat([output, df_dict], ignore_index=True)
+
 
     # training regressors
     output, linear_reg, ridge, las = model_training.regression_model_trainer(x_train, x_test, y_train, y_test)
     # training ensemble
+    # estimators = [('lr',linear_reg),('rid',ridge),('lasso',las)]
+    # df_dict, voting_ensemble = model_training.ensemble_regressor(x_train, x_test, y_train, y_test, estimators)
+    # output = pd.concat([output, df_dict], ignore_index=True)
     estimators = [('lr',linear_reg),('rid',ridge),('lasso',las)]
-    df_dict, voting_ensemble = model_training.ensemble_regressor(x_train, x_test, y_train, y_test, estimators)
-    output = pd.concat([output, df_dict], ignore_index=True)
-    output.head()
+    result = model_training.ensemble_regressor(x_train, x_test, y_train, y_test, estimators)
+
+    if result:
+        df_dict, voting_ensemble = result
+        output = pd.concat([output, df_dict], ignore_index=True)
+        output.head()
 
 
     # price range prediction

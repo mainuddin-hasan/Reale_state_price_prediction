@@ -13,13 +13,13 @@ loaded_model = joblib.load(fileName)
 
 def call_fastapi_predict_endpoint(data: ProperyPricePred):
         # data = data.dict()
-        st.write(data)
+        # st.write(data)
         data = pd.DataFrame([data])
-        st.write(data.head())
+        # st.write(data.head())
 
         prediction = loaded_model.predict(data)
-        st.write(str(prediction))
-        return str(prediction)
+        # st.write(str(prediction))
+        return prediction
 
 
 def inputform():
@@ -48,6 +48,7 @@ def inputform():
             offering_bedroom = st.number_input("Enter offering_bedroom*")
             quality_specification = st.number_input("Enter quality_specification*")
             stories_offering = st.number_input("Enter stories_offering*")
+            towers_stories = st.number_input("Enter towers_stories*")
             world_class = st.number_input("Enter world_class*")
 
 
@@ -76,6 +77,7 @@ def inputform():
                 "offering_bedroom": offering_bedroom,
                 "quality_specification": quality_specification,
                 "stories_offering": stories_offering,
+                "towers_stories": towers_stories,
                 "world_class": world_class,
                 # Add more fields accordingly
             }
@@ -86,5 +88,8 @@ def inputform():
                         st.error('Please fill all the * fields')
                     else:
                         prediction = call_fastapi_predict_endpoint(user_input)
-                        st.success(f"The predicted price is: {prediction}") 
+                        lowerlimit = prediction*-1 - 5
+                        upperlimit = prediction*-1 + 5
+                        
+                        st.success(f"The predicted price is: {lowerlimit} - {upperlimit} in laks ") 
                         st.write('successfully submitted')
